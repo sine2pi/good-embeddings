@@ -1,5 +1,5 @@
 
-class CombinedRotaryEmbedding(nn.Module):
+class GivensRotary(nn.Module):
     def __init__(self, n_state: int, n_head: int, n_freq: float,
                  theta_scale_learnable: bool = True,
                  n_rots_scale_learnable: bool = True,
