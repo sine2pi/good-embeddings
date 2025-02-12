@@ -2,7 +2,7 @@
 
 ### A mix of:
    ####  Givens Rotation 1/3
-   ####  Householder Rotation 1/3
+   ####  Householder (or quaternion) Rotation 1/3
    ####  Orthogonal Rotation  1/3
 
 #### Efficient-ish (relative to the original) version:
