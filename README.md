@@ -1,7 +1,7 @@
 ### A mix of:
-###  Givens Rotation
-###  Householder Rotation
-###  Orthogonal Rotation   
+####  Givens Rotation
+####  Householder Rotation
+####  Orthogonal Rotation   
 
 #### Efficient-ish (relative to the original) version:
      
