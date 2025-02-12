@@ -3,7 +3,7 @@
 ###  Householder Rotation
 ###  Orthogonal Rotation   
 
-#### Efficient-ish version:
+#### Efficient-ish (relative to the original) version:
      
      class EfficientBlendedRotaryEmbedding(nn.Module):
          def __init__(self, base, dims, head, theta_learnable=True, rot_learnable=True,
