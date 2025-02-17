@@ -1,8 +1,8 @@
 
-class rotary(nn.Module):
+class MixedTape(nn.Module):
     def __init__(self, base, n_state, n_head, rotation_type='givens', theta_learnable=False,
                  rot_learnable=False, matrix_learnable=False, freq_learnable=False):
-        super(rotary, self).__init__()
+        super(MixedTape, self).__init__()
         self.base = base
         self.n_state = n_state
         self.n_head = n_head
@@ -26,23 +26,54 @@ class rotary(nn.Module):
 
         if self.rotation_type == 'givens':
             self.rotation_function = self.givens
-        elif self.rotation_type == 'householder':
-            self.rotation_function = self.householder
         elif self.rotation_type == 'orthogonal':
             self.rotation_function = self.orthogonal
-        elif self.rotation_type == 'quaternion':
-            self.rotation_function = self.quaternion
+        elif self.rotation_type == 'mixed_tape':
+            self.rotation_function = self.apply_blended_rotation
         else:
             raise ValueError('Invalid rotation type')
 
-    def quaternion(self, x, theta, u, v):
+    def quaternion_rotation(self, x, theta, u, v):
         u = u / torch.norm(u)
         v = v / torch.norm(v)
         cos_theta = torch.cos(theta / 2)
         sin_theta = torch.sin(theta / 2)
-        q = cos_theta + sin_theta * torch.cross(u, v)
-        q_conjugate = cos_theta - sin_theta * torch.cross(u, v)
-        x = torch.cross(q, torch.cross(q_conjugate, x) + (torch.dot(q, x) * torch.eye(x.size(-1)).to(x.device)))
+
+        q = torch.tensor([cos_theta, sin_theta * u[0], sin_theta * u[1], sin_theta * u[2]], device=x.device)
+        q_conjugate = torch.tensor([cos_theta, -sin_theta * u[0], -sin_theta * u[1], -sin_theta * u[2]], device=x.device)
+
+        x_shape = x.shape
+        x = x.view(-1, 3)
+
+        uv_cross = torch.cross(u.unsqueeze(0), x)
+        uuv_cross = torch.cross(u.unsqueeze(0), uv_cross)
+        x_rot = x + 2 * (q[0] * uv_cross + uuv_cross)
+        
+        x_rot = x_rot.view(*x_shape)
+        return x_rot
+
+    def blended_rotation_matrix(self, dims, i, j, theta):
+        G = torch.eye(dims).to(theta.device)
+        G[i, i] = torch.cos(theta)
+        G[i, j] = -torch.sin(theta)
+        G[j, i] = torch.sin(theta)
+        G[j, j] = torch.cos(theta)
+
+        u = torch.eye(dims).to(theta.device)[i]
+        v = torch.eye(dims).to(theta.device)[j]
+
+        if dims == 3:
+            Q = self.quaternion_rotation(x=torch.eye(dims).to(theta.device), theta=theta, u=u, v=v)
+            return (G + Q) / 2
+        return G
+
+    def apply_blended_rotation(self, x):
+        adjusted_rot = int(torch.round(self.rot_scale * self.rot))
+        for k in range(adjusted_rot):
+            i, j = self.r_pairs[k].long()
+            theta = self.thetas[k] * self.theta_scale
+            B = self.blended_rotation_matrix(dims=self.h_dim, i=i, j=j, theta=theta)
+            x = torch.matmul(x, B)
         return x
 
     def givens_r_matrix(self, n_state, i, j, theta):
