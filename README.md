@@ -1,4 +1,4 @@
-### Fun with embeddings!  Choose your own rotation type examples : rotation_type='givens'   or household or orthogonal or quaternion. or blend them. Drop in replacment for your standard Facebook rope. Standard embedding take 100 steps to memorize 1 sentence. RoPe takes 50. This takes 5.
+### Fun with embeddings!  Choose your own rotation type examples : rotation_type='givens'   or household or orthogonal or quaternion. or blend them. Drop in replacment for your standard Facebook rope. Standard embedding take 100 steps to memorize 1 sentence. RoPe takes 50. This takes 5. Good embeddings! (Except for the Householder one that ones pretty bad.)
       class rotary(nn.Module):
           def __init__(self, base, n_state, n_head, rotation_type='givens', theta_learnable=False,
                        rot_learnable=False, matrix_learnable=False, freq_learnable=False):
