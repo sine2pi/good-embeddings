@@ -176,34 +176,3 @@ class MixedTape(nn.Module):
         x = x.view(batch_size, seq_len, self.n_state)
         return x
     
-
-class MultiRotationLayer(nn.Module):
-    def __init__(self, input_dim, output_dim, num_scales=3):
-        super(MultiRotationLayer, self).__init__()
-        self.num_scales = num_scales
-        self.rotations = nn.ModuleList([self._create_rotation(input_dim // (2**i)) for i in range(num_scales)])
-        self.scale = nn.Parameter(torch.ones(num_scales))
-
-    def _create_rotation(self, input_dim):
-        return nn.Sequential(
-            rotary.givens(input_dim // 3),
-            rotary.householder(input_dim // 3),
-            rotary.orthogonal(input_dim // 3),
-            rotary.quaternion(input_dim // 3),
-        )
-
-    def forward(self, x):
-        outputs = []
-        for i, rotation in enumerate(self.rotations):
-            output = rotation(x[:, ::(2**i)])
-            outputs.append(output)
-        x = torch.cat(outputs, dim=1)
-        return x
-
-    def update(self, loss):
-        self.scale.data = 1 / (1 + torch.exp(-loss))
-        for i, rotation in enumerate(self.rotations):
-            rotation.scale = self.scale[i]
-
-    def get_scale(self):
-        return self.scale
